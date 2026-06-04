@@ -24,48 +24,117 @@ from utils.helpers import (       # Import shared utility functions
     section_header,               # Displays a styled section title in the UI
     format_pvalue,                # Formats p-value for clean display
 )
+# Import the non-parametric tests and the test advisor from the nonparametric module
+from modules.nonparametric import (  # Import non-parametric test functions
+    render_normality_test,           # Normality test (Shapiro-Wilk + D'Agostino)
+    render_mann_whitney,             # Mann-Whitney U (non-parametric two-sample)
+    render_wilcoxon,                 # Wilcoxon signed-rank (non-parametric paired)
+    render_kruskal_wallis,           # Kruskal-Wallis (non-parametric ANOVA)
+    render_fishers_exact,            # Fisher's exact test (2x2 categorical)
+    render_test_advisor,             # Test advisor — recommends a test
+)
 
 
 def render_tests(df: pd.DataFrame):  # Define the render_tests function
     """
-    Main entry point for the Hypothesis Testing module.  # Execute this statement
-    Shows a dropdown to select which test to run, then routes to the correct function.  # Execute this statement
+    Main entry point for the Hypothesis Testing module.
+    Tests are organized into categories for easier navigation:
+      - Parametric Tests (assume normal data): t-tests, Z-test, ANOVA
+      - Non-Parametric Tests (no normality assumption): Mann-Whitney, Wilcoxon, Kruskal-Wallis, Fisher
+      - Correlation: Pearson
+      - Normality: Shapiro-Wilk normality test
+      - Test Advisor: recommends which test to use
 
-    Parameters:  # Execute this statement
-        df (pd.DataFrame): The uploaded dataset  # Create DataFrame from dictionary or array
+    Parameters:
+        df (pd.DataFrame): The uploaded dataset
     """
     section_header("Hypothesis Testing", "🧪")  # Display styled section heading
 
-    # Dropdown to choose which statistical test to perform
-    test_type = st.selectbox(  # Store result in test_type
-        "Select hypothesis test:",  # Label shown above the dropdown
-        [                               # All available tests listed here
-            "One-Sample T-test",        # Compare one sample mean to a hypothesized value
-            "Two-Sample T-test",        # Compare means of two independent groups
-            "Z-test (One-Sample)",      # Large-sample mean comparison using normal distribution
-            "One-Way ANOVA",            # Compare means across 3+ groups
-            "Two-Way ANOVA",            # Test two factors and their interaction
-            "Chi-Square Test",          # Test association between two categorical variables
-            "Pearson Correlation",      # Measure linear relationship between two numeric variables
+    # ---- Step 1: choose a category of test ----
+    # This groups related tests so the user is not overwhelmed by one long list
+    category = st.radio(  # Radio buttons for the test category
+        "Test category:",  # Label
+        [
+            "📐 Parametric Tests",        # Tests that assume normal data
+            "📊 Non-Parametric Tests",    # Tests that do NOT assume normal data
+            "🔗 Correlation",             # Relationship between numeric variables
+            "🔔 Normality",               # Check whether data is normal
+            "🧭 Test Advisor",            # Help choosing a test
         ],
-        key="test_type_select"          # Unique widget key to avoid Streamlit conflicts
+        horizontal=True,  # Display options in a horizontal row
+        key="test_category"  # Unique widget key
     )
 
-    # Route to the matching function based on user selection
-    if test_type == "One-Sample T-test":  # Check condition
-        _one_sample_ttest(df)           # Call one-sample T-test function
-    elif test_type == "Two-Sample T-test":  # Check alternative condition
-        _two_sample_ttest(df)           # Call two-sample T-test function
-    elif test_type == "Z-test (One-Sample)":  # Check alternative condition
-        _ztest_one_sample(df)           # Call Z-test function
-    elif test_type == "One-Way ANOVA":  # Check alternative condition
-        _one_way_anova(df)              # Call one-way ANOVA function
-    elif test_type == "Two-Way ANOVA":  # Check alternative condition
-        _two_way_anova(df)              # Call two-way ANOVA function
-    elif test_type == "Chi-Square Test":  # Check alternative condition
-        _chi_square_test(df)            # Call chi-square test function
-    elif test_type == "Pearson Correlation":  # Check alternative condition
-        _pearson_correlation(df)        # Call Pearson correlation function
+    st.markdown("---")  # Divider below the category selector
+
+    # ---- Step 2: route based on the chosen category ----
+
+    # ===== PARAMETRIC TESTS =====
+    if category == "📐 Parametric Tests":  # Parametric category selected
+        st.caption("Parametric tests assume the data is approximately normally distributed. "
+                   "Best for normal data or large samples (n ≥ 30).")  # Explain category
+        test_type = st.selectbox(  # Dropdown for the specific parametric test
+            "Select a parametric test:",
+            [
+                "One-Sample T-test",    # Compare one sample mean to a hypothesized value
+                "Two-Sample T-test",    # Compare means of two independent groups
+                "Z-test (One-Sample)",  # Large-sample mean comparison
+                "One-Way ANOVA",        # Compare means across 3+ groups
+                "Two-Way ANOVA",        # Two factors and their interaction
+            ],
+            key="parametric_test_select"  # Unique key
+        )
+        if test_type == "One-Sample T-test":  # Route to one-sample t-test
+            _one_sample_ttest(df)  # Call function
+        elif test_type == "Two-Sample T-test":  # Route to two-sample t-test
+            _two_sample_ttest(df)  # Call function
+        elif test_type == "Z-test (One-Sample)":  # Route to Z-test
+            _ztest_one_sample(df)  # Call function
+        elif test_type == "One-Way ANOVA":  # Route to one-way ANOVA
+            _one_way_anova(df)  # Call function
+        elif test_type == "Two-Way ANOVA":  # Route to two-way ANOVA
+            _two_way_anova(df)  # Call function
+
+    # ===== NON-PARAMETRIC TESTS =====
+    elif category == "📊 Non-Parametric Tests":  # Non-parametric category selected
+        st.caption("Non-parametric tests do NOT assume normal data. "
+                   "Use these when your data is not normally distributed or your sample is small.")  # Explain
+        test_type = st.selectbox(  # Dropdown for the specific non-parametric test
+            "Select a non-parametric test:",
+            [
+                "Mann-Whitney U (two groups)",        # Non-parametric two-sample
+                "Wilcoxon Signed-Rank (paired)",      # Non-parametric paired
+                "Kruskal-Wallis (3+ groups)",         # Non-parametric ANOVA
+                "Fisher's Exact Test (2x2 table)",    # Exact categorical association
+                "Chi-Square Test",                     # Categorical association (larger tables)
+            ],
+            key="nonparametric_test_select"  # Unique key
+        )
+        if test_type == "Mann-Whitney U (two groups)":  # Route to Mann-Whitney
+            render_mann_whitney(df)  # Call function from nonparametric module
+        elif test_type == "Wilcoxon Signed-Rank (paired)":  # Route to Wilcoxon
+            render_wilcoxon(df)  # Call function
+        elif test_type == "Kruskal-Wallis (3+ groups)":  # Route to Kruskal-Wallis
+            render_kruskal_wallis(df)  # Call function
+        elif test_type == "Fisher's Exact Test (2x2 table)":  # Route to Fisher's
+            render_fishers_exact(df)  # Call function
+        elif test_type == "Chi-Square Test":  # Route to chi-square (lives in this file)
+            _chi_square_test(df)  # Call function
+
+    # ===== CORRELATION =====
+    elif category == "🔗 Correlation":  # Correlation category selected
+        st.caption("Measures the strength and direction of the relationship between two numeric variables.")  # Explain
+        _pearson_correlation(df)  # Call Pearson correlation (only correlation test for now)
+
+    # ===== NORMALITY =====
+    elif category == "🔔 Normality":  # Normality category selected
+        st.caption("Check whether a numeric variable follows a normal distribution. "
+                   "This tells you whether parametric tests are appropriate.")  # Explain
+        render_normality_test(df)  # Call normality test from nonparametric module
+
+    # ===== TEST ADVISOR =====
+    elif category == "🧭 Test Advisor":  # Test advisor category selected
+        render_test_advisor(df)  # Call the test advisor from nonparametric module
 
 
 # =====================================================================

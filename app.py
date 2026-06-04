@@ -1,25 +1,30 @@
 # =========================
 # app.py
 # Main Streamlit application entry point
-# This is the file you run: streamlit run app.py
+# This is the file you run:  streamlit run app.py
 # =========================
 
 # ---- Standard library imports ----
-import io                          # For reading file bytes into pandas
+import io                          # For reading uploaded file bytes into pandas
 
 # ---- Third-party imports ----
 import pandas as pd                # Import pandas for dataset loading and handling
 import streamlit as st             # Import streamlit — the web dashboard framework
 
 # ---- Module imports (our own code) ----
-from modules.stats import render_statistics          # Descriptive statistics module
-from modules.plots import render_plots               # Visualization module
-from modules.sampling import render_sampling         # Sampling methods module
+from modules.stats import render_statistics             # Descriptive statistics module
+from modules.plots import render_plots                  # Visualization module
+from modules.sampling import render_sampling            # Sampling methods module
 from modules.normalization import render_normalization  # Normalization module
 from modules.distributions import render_distributions  # Theoretical distributions module
-from modules.fitting import render_fitting           # Distribution fitting + CLT module
-from modules.tests import render_tests               # Hypothesis testing module
-from utils.helpers import validate_dataframe, render_unit_manager  # DataFrame validation and unit manager
+from modules.fitting import render_fitting              # Distribution fitting + CLT module
+from modules.tests import render_tests                  # Hypothesis testing module
+from modules.data_profile import render_data_profile    # Data profile ("know your data") module
+from utils.helpers import (                             # Shared helper functions
+    validate_dataframe,                                 # Checks a DataFrame is loaded and non-empty
+    render_unit_manager,                                # Sidebar unit inputs for numeric columns
+    srh_logo_svg,                                       # Inline SRH University logo (SVG)
+)
 
 
 # =====================================================================
@@ -27,369 +32,324 @@ from utils.helpers import validate_dataframe, render_unit_manager  # DataFrame v
 # Must be the very first Streamlit call in the script
 # =====================================================================
 
-# Configure the Streamlit page title, icon, and layout
-st.set_page_config(  # Configure Streamlit page settings
+st.set_page_config(                       # Configure the Streamlit page settings
     page_title="Statistical Dashboard",   # Browser tab title
     page_icon="📊",                        # Browser tab icon
-    layout="wide",                        # Use full screen width
-    initial_sidebar_state="expanded",    # Start with sidebar open
+    layout="wide",                         # Use the full screen width
+    initial_sidebar_state="expanded",      # Start with the sidebar open
 )
 
 
 # =====================================================================
-# CUSTOM CSS STYLING
-# Injects CSS directly into the Streamlit page for custom look
+# CUSTOM CSS STYLING — light, modern, SRH-branded theme
+# Injects CSS directly into the page for a polished look
 # =====================================================================
 
-# Render formatted markdown text in the Streamlit UI
-st.markdown("""  # Render formatted markdown text in the Streamlit UI
-# Execute this operation
-<style>  # Execute this statement
-# Execute this operation
-/* ---- Main background color ---- */  # Execute this statement
-# Execute this operation
-.main {  # Execute this statement
-    background-color: #f8f9fb;
+st.markdown("""
+<style>
+/* ---- Import a clean Google font ---- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* ---- Global font ---- */
+html, body, [class*="css"] {
+    font-family: 'Inter', -apple-system, sans-serif;
 }
 
-# Execute this operation
-/* ---- Sidebar styling ---- */  # Execute this statement
-# Compute and store the result in [data-testid
-[data-testid="stSidebar"] {  # Store result in 
-    background-color: #1a1f36;
-    # Execute this operation
-    color: white;  # Execute this statement
+/* ---- Light gradient main background ---- */
+.stApp {
+    background: linear-gradient(135deg, #f6f9fc 0%, #eef3f9 100%);
 }
 
-# Execute this operation
-/* ---- Metric card styling ---- */  # Execute this statement
-# Compute and store the result in [data-testid
-[data-testid="stMetricValue"] {  # Store result in 
-    # Execute this operation
-    font-size: 1.6rem;  # Execute this statement
-    # Execute this operation
-    font-weight: 700;  # Execute this statement
-    color: #1a1f36;
+/* ---- Sidebar: soft white with subtle border ---- */
+[data-testid="stSidebar"] {
+    background: #ffffff;
+    border-right: 1px solid #e6ebf2;
+}
+[data-testid="stSidebar"] * {
+    color: #2c3e50;
 }
 
-# Execute this operation
-/* ---- Section headers ---- */  # Execute this statement
-# Execute this operation
-h3 {  # Execute this statement
-    color: #1a1f36;
+/* ---- Sidebar navigation radio buttons as clean cards ---- */
+[data-testid="stSidebar"] .stRadio > div {
+    gap: 4px;
+}
+[data-testid="stSidebar"] .stRadio label {
+    background: #f7fafc;
+    border: 1px solid #e6ebf2;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 2px;
+    transition: all 0.15s ease;
+    font-weight: 500;
+}
+[data-testid="stSidebar"] .stRadio label:hover {
+    background: #fff0e9;
+    border-color: #D44407;
 }
 
-# Execute this operation
-/* ---- Button styling ---- */  # Execute this statement
-# Execute this operation
-.stButton > button {  # Execute this statement
-    background-color: #3b5bdb;
-    # Execute this operation
-    color: white;  # Execute this statement
-    # Execute this operation
-    border-radius: 6px;  # Execute this statement
-    # Execute this operation
-    border: none;  # Execute this statement
-    # Execute this operation
-    padding: 0.4rem 1.2rem;  # Execute this statement
-    # Execute this operation
-    font-weight: 600;  # Execute this statement
+/* ---- Metric cards: white with soft shadow and orange accent ---- */
+[data-testid="stMetric"] {
+    background: #ffffff;
+    border: 1px solid #e6ebf2;
+    border-left: 4px solid #D44407;
+    border-radius: 10px;
+    padding: 14px 18px;
+    box-shadow: 0 1px 3px rgba(16,42,67,0.06);
 }
-# Execute this operation
-.stButton > button:hover {  # Execute this statement
-    background-color: #2f4dc4;
+[data-testid="stMetricValue"] {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #102a43;
+}
+[data-testid="stMetricLabel"] {
+    font-weight: 500;
+    color: #627d98;
 }
 
-# Execute this operation
-/* ---- Expander header ---- */  # Execute this statement
-# Execute this operation
-details > summary {  # Execute this statement
-    # Execute this operation
-    font-weight: 600;  # Execute this statement
-    color: #1a1f36;
+/* ---- Headings ---- */
+h1, h2, h3 {
+    color: #102a43;
+    font-weight: 700;
 }
-# Execute this operation
-</style>  # Execute this statement
-""", unsafe_allow_html=True)   # unsafe_allow_html=True is required to inject raw HTML/CSS
+
+/* ---- Primary buttons: SRH orange ---- */
+.stButton > button {
+    background: linear-gradient(135deg, #D44407 0%, #e85d20 100%);
+    color: #ffffff;
+    border-radius: 8px;
+    border: none;
+    padding: 0.5rem 1.4rem;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(212,68,7,0.25);
+    transition: all 0.15s ease;
+}
+.stButton > button:hover {
+    background: linear-gradient(135deg, #b8390a 0%, #D44407 100%);
+    box-shadow: 0 4px 10px rgba(212,68,7,0.35);
+    transform: translateY(-1px);
+}
+
+/* ---- Tabs / radio inside main area ---- */
+.stRadio [role="radiogroup"] label {
+    font-weight: 500;
+}
+
+/* ---- Expander: card-like ---- */
+details {
+    background: #ffffff;
+    border: 1px solid #e6ebf2;
+    border-radius: 10px;
+    padding: 4px 12px;
+    box-shadow: 0 1px 3px rgba(16,42,67,0.05);
+}
+details > summary {
+    font-weight: 600;
+    color: #102a43;
+}
+
+/* ---- DataFrame container ---- */
+[data-testid="stDataFrame"] {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #e6ebf2;
+}
+
+/* ---- Info/success/warning boxes: rounder ---- */
+.stAlert {
+    border-radius: 10px;
+}
+
+/* ---- Selectbox & inputs ---- */
+.stSelectbox > div > div, .stTextInput > div > div {
+    border-radius: 8px;
+}
+</style>
+""", unsafe_allow_html=True)   # unsafe_allow_html=True is required to inject raw CSS
 
 
 # =====================================================================
-# SIDEBAR — Navigation menu and file upload
+# SIDEBAR — Logo, file upload, and navigation menu
 # =====================================================================
 
-# Open a context manager (auto-closes when done)
-with st.sidebar:  # Open context manager
-    # Display the dashboard logo/title in the sidebar
-    # Render formatted markdown text in the Streamlit UI
-    st.markdown("## 📊 Stats Dashboard")  # Render formatted markdown text in the Streamlit UI
-    # Render formatted markdown text in the Streamlit UI
-    st.markdown("*Interactive Statistical Analysis*")  # Render formatted markdown text in the Streamlit UI
-    st.markdown("---")   # Horizontal divider
+with st.sidebar:  # Everything inside here renders in the sidebar
+    # ---- SRH University logo (inline SVG, official orange) ----
+    st.markdown(srh_logo_svg(width=170), unsafe_allow_html=True)  # Render the SRH logo
+
+    # ---- Dashboard title ----
+    st.markdown("## 📊 Stats Dashboard")            # Dashboard title
+    st.caption("Interactive Statistical Analysis · SRH University")  # Subtitle
+    st.markdown("---")  # Divider
 
     # ---- FILE UPLOAD ----
-    # Render formatted markdown text in the Streamlit UI
-    st.markdown("### 📂 Upload Dataset")  # Render formatted markdown text in the Streamlit UI
-
-    # st.file_uploader creates a drag-and-drop file upload widget
-    # Compute and store the result in uploaded_file
-    uploaded_file = st.file_uploader(  # Store result in uploaded_file
-        "Upload a CSV file",         # Label text
-        type=["csv"],                # Only accept .csv files
-        help="Upload any CSV dataset to begin analysis",  # Tooltip text
+    st.markdown("### 📂 Upload Dataset")  # Upload section heading
+    uploaded_file = st.file_uploader(     # Drag-and-drop CSV upload widget
+        "Upload a CSV file",              # Label
+        type=["csv"],                     # Only accept .csv files
+        help="Upload any CSV dataset to begin analysis",  # Tooltip
     )
 
-    st.markdown("---")   # Divider between upload and navigation
+    st.markdown("---")  # Divider between upload and navigation
 
     # ---- NAVIGATION MENU ----
-    # Render formatted markdown text in the Streamlit UI
-    st.markdown("### 🧭 Navigate")  # Render formatted markdown text in the Streamlit UI
-
-    # st.radio creates a vertical radio button menu
-    # Compute and store the result in page
-    page = st.radio(  # Store result in page
-        "Choose a module:",          # Label
-        [                            # List of available pages
-            # Execute this operation
-            "🏠 Home",  # Execute this statement
-            # Execute this operation
-            "📐 Descriptive Statistics",  # Execute this statement
-            # Execute this operation
-            "📈 Visualizations",  # Execute this statement
-            # Execute this operation
-            "🎲 Sampling",  # Execute this statement
-            # Execute this operation
-            "⚖️ Normalization",  # Execute this statement
-            # Execute this operation
-            "🔔 Distributions",  # Execute this statement
-            # Execute this operation
-            "🔗 Fitting & CLT",  # Execute this statement
-            # Execute this operation
-            "🧪 Hypothesis Testing",  # Execute this statement
-        # Execute this operation
-        ],  # Execute this statement
-        label_visibility="collapsed",   # Hide the label (already shown as heading above)
-        # Compute and store the result in key
-        key="nav_radio"  # Store result in key
+    st.markdown("### 🧭 Navigate")  # Navigation heading
+    page = st.radio(                # Vertical radio-button menu
+        "Choose a module:",         # Label (hidden below)
+        [                           # List of available pages
+            "🏠 Home",                      # Welcome page
+            "🔎 Data Profile",              # Know-your-data overview (NEW)
+            "📐 Descriptive Statistics",    # Mean, median, std, etc.
+            "📈 Visualizations",            # Charts
+            "🎲 Sampling",                  # Sampling methods
+            "⚖️ Normalization",             # Scaling methods
+            "🔔 Distributions",             # Theoretical distributions
+            "🔗 Fitting & CLT",             # Distribution fitting + CLT
+            "🧪 Hypothesis Testing",        # All statistical tests
+        ],
+        label_visibility="collapsed",   # Hide the label (heading shown above)
+        key="nav_radio"                 # Unique widget key
     )
-
-    st.markdown("---")   # Bottom divider
-
-    # Show dataset info in sidebar if a file is loaded
-    # Check condition and branch accordingly
-    if uploaded_file is not None:  # Check condition
-        # Display a green indicator when file is loaded
-        # Render formatted markdown text in the Streamlit UI
-        st.markdown("### ✅ Dataset Loaded")  # Render formatted markdown text in the Streamlit UI
-        # These will be filled in after loading below
 
 
 # =====================================================================
 # DATASET LOADING
-# Load the uploaded CSV into a pandas DataFrame and store in session
+# Load the uploaded CSV into a pandas DataFrame and keep it in session state
 # =====================================================================
 
-# st.session_state is a dictionary that persists across Streamlit reruns
-# We use it to store the loaded DataFrame so it doesn't disappear on interaction
+if "df" not in st.session_state:    # First run — no DataFrame yet
+    st.session_state["df"] = None   # Initialize to None
 
-# Check condition and branch accordingly
-if "df" not in st.session_state:  # Check condition
-    st.session_state["df"] = None   # Initialize to None if not yet loaded
-
-# Check condition and branch accordingly
-if uploaded_file is not None:  # Check condition
+if uploaded_file is not None:       # A file has been uploaded
     try:
-        # Read the uploaded file's bytes as a string buffer
-        # This is needed because Streamlit's file_uploader returns a BytesIO object
-        bytes_data = uploaded_file.read()   # Read raw bytes from the uploaded file
-
-        # Try UTF-8 first, fall back to latin-1 for special characters
+        bytes_data = uploaded_file.read()  # Read the raw bytes from the upload
+        # Try UTF-8 first; fall back to latin-1 for files with special characters
         try:
-            df_loaded = pd.read_csv(io.BytesIO(bytes_data), encoding="utf-8")   # Parse CSV
-        # Handle any error that occurred in the try block
-        except UnicodeDecodeError:  # Handle any error from the try block
-            df_loaded = pd.read_csv(io.BytesIO(bytes_data), encoding="latin-1")  # Fallback
+            df_loaded = pd.read_csv(io.BytesIO(bytes_data), encoding="utf-8")  # Parse as UTF-8
+        except UnicodeDecodeError:  # UTF-8 failed
+            df_loaded = pd.read_csv(io.BytesIO(bytes_data), encoding="latin-1")  # Fallback encoding
+        st.session_state["df"] = df_loaded  # Store the loaded DataFrame in session state
+    except Exception as e:  # Any parsing error
+        st.sidebar.error(f"Could not read file: {e}")  # Show a friendly error in the sidebar
 
-        # Save the DataFrame into session state so all pages can access it
-        # Access persistent state that survives page reruns
-        st.session_state["df"] = df_loaded  # Access persistent state across reruns
+df = st.session_state.get("df", None)  # Retrieve the DataFrame (None if nothing loaded)
 
-    # Handle any error that occurred in the try block
-    except Exception as e:  # Handle any error from the try block
-        # If parsing fails, show a friendly error message
-        # Display content in the sidebar panel
-        st.sidebar.error(f"Could not read file: {e}")  # Execute this statement
-
-# Retrieve the DataFrame from session state (may be None if no file loaded)
-# Pandas data operation
-df = st.session_state.get("df", None)  # Store result in df
-
-# Update the sidebar with dataset info if loaded
-# Check condition and branch accordingly
-if df is not None:  # Check condition
-    # Open a context manager (auto-closes when done)
-    with st.sidebar:  # Open context manager
-        st.markdown(f"- **Rows:** {df.shape[0]}")             # Show row count
-        st.markdown(f"- **Columns:** {df.shape[1]}")          # Show column count
+# ---- Sidebar dataset info + unit manager (only when a file is loaded) ----
+if df is not None:  # A dataset is loaded
+    with st.sidebar:  # Render in the sidebar
+        st.markdown("---")  # Divider
+        st.markdown("### ✅ Dataset Loaded")  # Status heading
+        st.markdown(f"- **Rows:** {df.shape[0]:,}")          # Row count
+        st.markdown(f"- **Columns:** {df.shape[1]}")         # Column count
         st.markdown(f"- **Numeric cols:** {len(df.select_dtypes(include='number').columns)}")  # Numeric count
-        missing_pct = 100 * df.isnull().sum().sum() / (df.shape[0] * df.shape[1])  # % missing
-        st.markdown(f"- **Missing values:** {missing_pct:.1f}%")  # Show missing %
+        missing_pct = 100 * df.isnull().sum().sum() / (df.shape[0] * df.shape[1])  # % missing cells
+        st.markdown(f"- **Missing values:** {missing_pct:.1f}%")  # Missing percentage
 
-    # Render the unit manager in the sidebar so user can define units for all numeric columns
-    # These units will appear on chart axes and result displays throughout the dashboard
-    render_unit_manager(df)  # Call unit manager — shows text inputs for each numeric column
+    # Render the unit manager so the user can define units for each numeric column.
+    # These units appear on chart axes and in results throughout the dashboard.
+    render_unit_manager(df)  # Show unit text inputs in the sidebar
 
 
 # =====================================================================
-# PAGE ROUTING
-# Display the correct module based on sidebar navigation selection
+# PAGE ROUTING — show the selected module
 # =====================================================================
 
 # ---- HOME PAGE ----
-# Check condition and branch accordingly
-if page == "🏠 Home":  # Check condition
-    # Display the main dashboard welcome page
-    # Display a large page title heading
-    st.title("📊 Statistical Analysis Dashboard")  # Display a large page title
-    # Render formatted markdown text in the Streamlit UI
-    st.markdown("### Welcome to your interactive statistics toolbox")  # Render formatted markdown text in the Streamlit UI
-    # Render formatted markdown text in the Streamlit UI
-    st.markdown("""  # Render formatted markdown text in the Streamlit UI
-    # Execute this operation
-    This dashboard provides a complete statistical analysis workflow for any CSV dataset.  # Execute this statement
-    # Execute this operation
-    Upload a file using the sidebar and navigate through the modules below.  # Execute this statement
-    """)
+if page == "🏠 Home":  # Home selected
+    st.title("📊 Statistical Analysis Dashboard")  # Main page title
+    st.markdown("#### Welcome to your interactive statistics toolbox — built for SRH University")  # Subtitle
 
-    # Display a feature overview grid using Streamlit columns
-    col1, col2, col3 = st.columns(3)   # Three columns for feature cards
+    st.markdown("This dashboard provides a complete statistical analysis workflow for any CSV dataset. "
+                "Upload a file using the sidebar and explore the modules below.")  # Intro text
 
-    # Open a context manager (auto-closes when done)
-    with col1:  # Open context manager
-        # Show an informational blue message box
-        st.info("**📐 Descriptive Statistics**\nMean, Median, Mode, Variance, Std Dev with formulas")  # Show an informational blue message box
-        # Show an informational blue message box
-        st.info("**📈 Visualizations**\nHistogram, Boxplot, Scatter, KDE, Spider, Gauge & more")  # Show an informational blue message box
-        # Show an informational blue message box
-        st.info("**🎲 Sampling**\nRandom, Systematic, Stratified sampling methods")  # Show an informational blue message box
+    # Feature overview cards in three columns
+    col1, col2, col3 = st.columns(3)  # Three columns
 
-    # Open a context manager (auto-closes when done)
-    with col2:  # Open context manager
-        # Show an informational blue message box
-        st.info("**⚖️ Normalization**\nMin-Max scaling and Z-score standardization")  # Show an informational blue message box
-        # Show an informational blue message box
-        st.info("**🔔 Distributions**\nNormal, Poisson, Exponential, Binomial, Bernoulli, Uniform")  # Show an informational blue message box
-        # Show an informational blue message box
-        st.info("**🔗 Fitting & CLT**\nFit your data to distributions + CLT simulation")  # Show an informational blue message box
+    with col1:  # First column of feature cards
+        st.info("**🔎 Data Profile**\nUnderstand your data: size, types, missing values, normality")  # Card
+        st.info("**📐 Descriptive Statistics**\nMean, Median, Mode, Variance, Std Dev with formulas")  # Card
+        st.info("**📈 Visualizations**\nHistogram, Boxplot, Scatter, KDE, Violin & more")  # Card
 
-    # Open a context manager (auto-closes when done)
-    with col3:  # Open context manager
-        # Show an informational blue message box
-        st.info("**🧪 Hypothesis Testing**\nT-test, Z-test, ANOVA, Chi-square with interpretation")  # Show an informational blue message box
-        # Show a yellow warning message to the user
-        st.warning("**📂 Getting Started**\nUpload a CSV file using the sidebar to begin analysis")  # Show a yellow warning message
-        # Show a green success message to the user
-        st.success("**✅ All modules are fully interactive and educational**")  # Show a green success message
+    with col2:  # Second column
+        st.info("**🎲 Sampling**\nRandom, Systematic, Stratified sampling methods")  # Card
+        st.info("**⚖️ Normalization**\nMin-Max scaling and Z-score standardization")  # Card
+        st.info("**🔔 Distributions**\nNormal, Poisson, Exponential, Binomial, Bernoulli, Uniform")  # Card
 
-    # If no file is uploaded, show a demo prompt
-    # Check condition and branch accordingly
-    if df is None:  # Check condition
-        # Render formatted markdown text in the Streamlit UI
-        st.markdown("---")  # Render formatted markdown text in the Streamlit UI
-        # Render formatted markdown text in the Streamlit UI
-        st.markdown("### 🚀 Quick Start")  # Render formatted markdown text in the Streamlit UI
-        # Render formatted markdown text in the Streamlit UI
-        st.markdown("""  # Render formatted markdown text in the Streamlit UI
-        # Execute this operation
-        1. Click **Browse files** in the sidebar  # Execute this statement
-        # Execute this operation
-        2. Upload any CSV dataset (e.g., Iris, Titanic, or your own)  # Execute this statement
-        # Execute this operation
-        3. Use the sidebar menu to navigate to any module  # Execute this statement
-        # Execute this operation
-        4. Select columns and click buttons to explore your data  # Execute this statement
-        """)
-        # Show an informational blue message box
-        st.info("💡 Tip: You can download sample datasets from [Kaggle](https://www.kaggle.com/datasets) or use any CSV file.")  # Show an informational blue message box
-    else:
-        # Show a preview of the loaded dataset
-        # Render formatted markdown text in the Streamlit UI
-        st.markdown("---")  # Render formatted markdown text in the Streamlit UI
-        # Render formatted markdown text in the Streamlit UI
-        st.markdown("### 📋 Dataset Preview")  # Render formatted markdown text in the Streamlit UI
-        st.dataframe(df.head(10), use_container_width=True)   # Show first 10 rows
-        # Show small grey caption text below a widget
-        st.caption(f"Showing first 10 of {len(df)} rows · {len(df.columns)} columns")  # Show small grey caption text
+    with col3:  # Third column
+        st.info("**🔗 Fitting & CLT**\nFit your data to distributions + CLT simulation")  # Card
+        st.info("**🧪 Hypothesis Testing**\nParametric & non-parametric tests + a Test Advisor")  # Card
+        st.success("**✅ Every module is interactive, uses your real data, and explains its results**")  # Card
 
-        # Show basic data info
-        # Open a context manager (auto-closes when done)
-        with st.expander("📊 Column Data Types"):  # Open context manager
-            # Create a summary of column names and their data types
-            # Create a new DataFrame from a dictionary or array
-            dtype_df = pd.DataFrame({  # Create DataFrame from dictionary or array
-                "Column": df.dtypes.index,                   # Column names
-                "Data Type": df.dtypes.values.astype(str),  # Their dtypes as strings
-                "Non-Null Count": df.count().values,         # Count of non-null values
-                "Null Count": df.isnull().sum().values,      # Count of null values
-            # Execute this operation
-            })  # Execute this statement
-            # Render an interactive data table in the UI
-            st.dataframe(dtype_df, use_container_width=True, hide_index=True)  # Render an interactive data table
+    # If no dataset is loaded, show quick-start instructions; otherwise show a preview
+    if df is None:  # No data loaded yet
+        st.markdown("---")  # Divider
+        st.markdown("### 🚀 Quick Start")  # Quick start heading
+        st.markdown("1. Click **Browse files** in the sidebar\n"
+                    "2. Upload any CSV dataset (e.g. Iris, Titanic, or your own)\n"
+                    "3. Visit **Data Profile** to understand your data\n"
+                    "4. Use the menu to run any analysis")  # Numbered steps
+        st.info("💡 Tip: You can download sample datasets from Kaggle or use any CSV file.")  # Tip
+    else:  # A dataset is loaded
+        st.markdown("---")  # Divider
+        st.markdown("### 📋 Dataset Preview")  # Preview heading
+        st.dataframe(df.head(10), use_container_width=True)  # Show first 10 rows
+        st.caption(f"Showing first 10 of {len(df):,} rows · {len(df.columns)} columns")  # Caption
 
-# ---- STATISTICS PAGE ----
-# Alternative condition check
-elif page == "📐 Descriptive Statistics":  # Check alternative condition
-    if validate_dataframe(df):      # Validate that dataset is loaded
-        render_statistics(df)       # Call the statistics module
+        with st.expander("📊 Column Data Types"):  # Collapsible column-type table
+            dtype_df = pd.DataFrame({  # Build a summary of columns and dtypes
+                "Column": df.dtypes.index,                    # Column names
+                "Data Type": df.dtypes.values.astype(str),    # Data types as strings
+                "Non-Null Count": df.count().values,          # Non-null counts
+                "Null Count": df.isnull().sum().values,       # Null counts
+            })  # End DataFrame
+            st.dataframe(dtype_df, use_container_width=True, hide_index=True)  # Show the table
+
+# ---- DATA PROFILE PAGE ----
+elif page == "🔎 Data Profile":  # Data Profile selected
+    if validate_dataframe(df):     # Ensure a dataset is loaded
+        render_data_profile(df)    # Call the data profile module
+
+# ---- DESCRIPTIVE STATISTICS PAGE ----
+elif page == "📐 Descriptive Statistics":  # Statistics selected
+    if validate_dataframe(df):              # Ensure dataset is loaded
+        render_statistics(df)               # Call the statistics module
 
 # ---- VISUALIZATIONS PAGE ----
-# Alternative condition check
-elif page == "📈 Visualizations":  # Check alternative condition
-    if validate_dataframe(df):      # Validate dataset
+elif page == "📈 Visualizations":  # Visualizations selected
+    if validate_dataframe(df):      # Ensure dataset is loaded
         render_plots(df)            # Call the plots module
 
 # ---- SAMPLING PAGE ----
-# Alternative condition check
-elif page == "🎲 Sampling":  # Check alternative condition
-    if validate_dataframe(df):      # Validate dataset
-        render_sampling(df)         # Call the sampling module
+elif page == "🎲 Sampling":  # Sampling selected
+    if validate_dataframe(df):  # Ensure dataset is loaded
+        render_sampling(df)     # Call the sampling module
 
 # ---- NORMALIZATION PAGE ----
-# Alternative condition check
-elif page == "⚖️ Normalization":  # Check alternative condition
-    if validate_dataframe(df):      # Validate dataset
-        render_normalization(df)    # Call the normalization module
+elif page == "⚖️ Normalization":  # Normalization selected
+    if validate_dataframe(df):     # Ensure dataset is loaded
+        render_normalization(df)   # Call the normalization module
 
 # ---- DISTRIBUTIONS PAGE ----
-# Alternative condition check
-elif page == "🔔 Distributions":  # Check alternative condition
-    # Distributions module doesn't need a dataset — it's theoretical
-    render_distributions(df)        # Call distributions module (df may be None here)
+elif page == "🔔 Distributions":  # Distributions selected
+    render_distributions(df)       # Call distributions module (works with or without data)
 
 # ---- FITTING & CLT PAGE ----
-# Alternative condition check
-elif page == "🔗 Fitting & CLT":  # Check alternative condition
-    if validate_dataframe(df):      # Validate dataset (CLT simulation needs data)
-        render_fitting(df)          # Call the fitting and CLT module
+elif page == "🔗 Fitting & CLT":  # Fitting & CLT selected
+    if validate_dataframe(df):      # Ensure dataset is loaded (CLT needs data)
+        render_fitting(df)          # Call the fitting + CLT module
 
 # ---- HYPOTHESIS TESTING PAGE ----
-# Alternative condition check
-elif page == "🧪 Hypothesis Testing":  # Check alternative condition
-    if validate_dataframe(df):      # Validate dataset
-        render_tests(df)            # Call the hypothesis testing module
+elif page == "🧪 Hypothesis Testing":  # Hypothesis testing selected
+    if validate_dataframe(df):          # Ensure dataset is loaded
+        render_tests(df)                # Call the hypothesis testing module
 
 
 # =====================================================================
 # FOOTER
 # =====================================================================
 
-st.markdown("---")   # Bottom divider
-# Render formatted markdown text in the Streamlit UI
-st.markdown(  # Render formatted markdown text in the Streamlit UI
-    # Compute and store the result in "<div style
-    "<div style='text-align:center; color:#999; font-size:0.8rem;'>"  # Store result in "<div style
-    # Execute this operation
-    "Statistical Dashboard · Built with Python & Streamlit · Educational Use"  # Execute this statement
-    # Execute this operation
-    "</div>",  # Execute this statement
-    unsafe_allow_html=True   # Allow HTML for centered/styled footer text
+st.markdown("---")  # Bottom divider
+st.markdown(  # Centered footer text
+    "<div style='text-align:center; color:#9fb3c8; font-size:0.8rem; padding:8px;'>"  # Styled container
+    "Statistical Dashboard · SRH University · Built with Python &amp; Streamlit · Educational Use"  # Footer text
+    "</div>",
+    unsafe_allow_html=True   # Allow HTML for the centered footer
 )

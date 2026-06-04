@@ -189,6 +189,33 @@ def section_header(title: str, emoji: str = "📌"):
     st.subheader(f"{emoji} {title}")      # Section title with emoji
 
 
+def srh_logo_svg(width: int = 150) -> str:
+    """
+    Return an inline SVG logo styled in SRH University's official orange (#D44407).
+    Used in the sidebar and header. SVG is embedded directly so no image file is needed.
+
+    Parameters:
+        width (int): Width of the logo in pixels
+
+    Returns:
+        str: HTML string containing the SVG logo
+    """
+    # SRH official brand color is orange (#D44407) on a clean background
+    # This builds a simple, professional wordmark-style logo using SVG shapes
+    return f"""
+    <div style="display:flex; align-items:center; gap:10px; padding:4px 0;">
+        <svg width="{width}" height="{int(width*0.38)}" viewBox="0 0 200 76" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="0" width="200" height="76" rx="8" fill="#D44407"/>
+            <text x="100" y="40" font-family="Arial, sans-serif" font-size="34"
+                  font-weight="800" fill="white" text-anchor="middle">SRH</text>
+            <text x="100" y="60" font-family="Arial, sans-serif" font-size="11"
+                  font-weight="400" fill="#FFE0D0" text-anchor="middle"
+                  letter-spacing="1">UNIVERSITY</text>
+        </svg>
+    </div>
+    """
+
+
 def render_inline_unit_input(col: str, key_suffix: str = "") -> str:
     """
     Render a small inline unit text input next to a column selector.
