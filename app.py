@@ -345,6 +345,7 @@ with st.sidebar:  # Everything inside here renders in the sidebar
             "🔗 Fitting & CLT",             # Distribution fitting + CLT
             "🧪 Hypothesis Testing",        # All statistical tests
             "🎯 Confidence Intervals",      # Confidence intervals for the mean
+            "📖 User Guide",                # In-app help and instructions
         ],
         label_visibility="collapsed",   # Hide the label (heading shown above)
         key="nav_radio"                 # Unique widget key
@@ -510,6 +511,88 @@ elif page == "🧪 Hypothesis Testing":  # Hypothesis testing selected
 elif page == "🎯 Confidence Intervals":  # Confidence intervals selected
     if validate_dataframe(df):            # Ensure dataset is loaded
         render_confidence_intervals(df)   # Call the confidence intervals module
+
+# ---- USER GUIDE PAGE ----
+elif page == "📖 User Guide":  # User Guide selected
+    # This page shows the full instructions inside the app, so users do not
+    # need to leave the dashboard to learn how to use it.
+    st.title("📖 User Guide")  # Page title
+    st.markdown("#### Everything you need to know to use this dashboard")  # Subtitle
+
+    # ---- Quick start ----
+    st.markdown("### 🚀 Quick Start (3 steps)")  # Section heading
+    st.markdown(
+        "1. **Upload a CSV file** using the box in the sidebar (or use the sample dataset below).\n"
+        "2. *(Optional)* On the **Home** page, type a **unit** for each numeric column "
+        "(e.g. `$`, `kg`, `years`). These show up on every chart.\n"
+        "3. **Pick a module** from the sidebar menu and follow the on-screen options. "
+        "Every screen explains what it does and interprets the result for you."
+    )  # Three-step instructions
+
+    st.info("💡 New here? Start with **🔎 Data Profile** to understand your data, then try "
+            "the **🧭 Test Advisor** (inside Hypothesis Testing) if you're unsure which test to use.")  # Tip
+
+    # ---- What each module does ----
+    st.markdown("### 🧰 What each module does")  # Section heading
+    guide_rows = [  # Build a table describing each module
+        ("🔎 Data Profile", "Row/column counts, missing values, normality per column, plus data cleaning & CSV export."),
+        ("📐 Descriptive Statistics", "Mean, median, mode, variance, standard deviation — with formulas and plain explanations."),
+        ("📈 Visualizations", "Histogram, Box plot, Scatter, KDE, Violin, Bar, and Line charts (interactive)."),
+        ("🎲 Sampling", "Random, Systematic, and Stratified sampling, with downloadable samples."),
+        ("⚖️ Normalization", "Min-Max scaling and Z-score standardization, with before/after charts."),
+        ("🔔 Distributions", "Fit data to Normal, Poisson, Exponential, Binomial, Bernoulli, Uniform — see PDFs & CDFs."),
+        ("🔗 Fitting & CLT", "Distribution fitting with goodness-of-fit, plus a Central Limit Theorem simulation."),
+        ("🧪 Hypothesis Testing", "A full suite of tests grouped by type, plus a Test Advisor that recommends a test."),
+        ("🎯 Confidence Intervals", "Estimate the range that very likely contains the true population mean."),
+    ]  # End of module descriptions
+    guide_df = pd.DataFrame(guide_rows, columns=["Module", "What it does"])  # Convert to a table
+    st.dataframe(guide_df, use_container_width=True, hide_index=True)  # Show the table
+
+    # ---- Available statistical tests ----
+    st.markdown("### 🧪 Statistical tests available")  # Section heading
+    st.markdown(
+        "- **Parametric:** One-Sample t-test, Two-Sample t-test, Z-test, One-Way ANOVA, Two-Way ANOVA\n"
+        "- **Non-Parametric:** Mann-Whitney U, Wilcoxon Signed-Rank, Kruskal-Wallis, Fisher's Exact, Chi-Square\n"
+        "- **Correlation:** Pearson correlation (with significance test and scatter + regression line)\n"
+        "- **Normality:** Shapiro-Wilk and D'Agostino, with histogram and Q-Q plot\n"
+        "- **🧭 Test Advisor:** examines your data and recommends the right test for your goal"
+    )  # List of tests
+
+    # ---- Worked example ----
+    st.markdown("### 📈 Example analysis (with the sample dataset)")  # Section heading
+    st.markdown(
+        "1. Upload `IBM_HR_Analytics.csv` (download it below).\n"
+        "2. On the **Home** page, set the unit of `MonthlyIncome` to `$`.\n"
+        "3. Go to **🧪 Hypothesis Testing → Non-Parametric → Chi-Square Test**, "
+        "choose `Attrition` and `OverTime`.\n"
+        "   → Strong association (χ² ≈ 85, p < 0.0001): overtime workers leave about **4× more often**.\n"
+        "4. Go to **🎯 Confidence Intervals**, choose `MonthlyIncome`, 95%.\n"
+        "   → A range that very likely contains the true average salary.\n"
+        "5. Use **📐 Descriptive Statistics** and **📈 Visualizations** to summarize and plot the data."
+    )  # Step-by-step example
+
+    # ---- Sample dataset download (if it's available next to the app) ----
+    st.markdown("### 📂 Sample dataset")  # Section heading
+    import os  # Import os to check whether the sample file exists
+    sample_path = "IBM_HR_Analytics.csv"  # Expected filename in the app folder
+    if os.path.exists(sample_path):  # If the sample dataset is present
+        with open(sample_path, "rb") as f:  # Open the file in binary mode
+            st.download_button(  # Offer it as a download
+                "⬇️ Download sample dataset (IBM HR Analytics)",  # Button label
+                data=f.read(),                  # File content
+                file_name="IBM_HR_Analytics.csv",  # Suggested name
+                mime="text/csv",                # File type
+            )  # End download button
+        st.caption("1,470 employee records · 25 variables. Or upload any CSV of your own.")  # Caption
+    else:  # Sample file not found next to the app
+        st.caption("Upload any CSV file to begin — the toolkit adapts to your data automatically.")  # Fallback note
+
+    # ---- Link to the live app / source ----
+    st.markdown("### 🔗 Links")  # Section heading
+    st.markdown(
+        "- **Live app:** https://srh-stats-dashboard.streamlit.app\n"
+        "- **Source code & full documentation:** https://github.com/sadeghianh/BigDataTools"
+    )  # Helpful links
 
 
 # =====================================================================
