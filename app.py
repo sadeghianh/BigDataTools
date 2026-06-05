@@ -532,11 +532,16 @@ elif page == "📖 User Guide":  # User Guide selected
     st.info("💡 New here? Start with **🔎 Data Profile** to understand your data, then try "
             "the **🧭 Test Advisor** (inside Hypothesis Testing) if you're unsure which test to use.")  # Tip
 
-    # ---- What each module does ----
+    # ---- What each module does (clickable — jumps to that page) ----
     st.markdown("### 🧰 What each module does")  # Section heading
-    guide_rows = [  # Build a table describing each module
+    st.caption("Click any module below to jump straight to it.")  # Tell user they're clickable
+
+    # Each entry: (page name exactly as in the sidebar menu, description)
+    # Clicking a button sets the navigation state to that page and reruns the app,
+    # which switches the view — just like clicking the sidebar menu item.
+    module_guide = [  # List of (page, description) pairs
         ("🔎 Data Profile", "Row/column counts, missing values, normality per column, plus data cleaning & CSV export."),
-        ("📐 Descriptive Statistics", "Mean, median, mode, variance, standard deviation — with formulas and plain explanations."),
+        ("📐 Descriptive Statistics", "Mean, median, mode, variance, standard deviation — with formulas and explanations."),
         ("📈 Visualizations", "Histogram, Box plot, Scatter, KDE, Violin, Bar, and Line charts (interactive)."),
         ("🎲 Sampling", "Random, Systematic, and Stratified sampling, with downloadable samples."),
         ("⚖️ Normalization", "Min-Max scaling and Z-score standardization, with before/after charts."),
@@ -544,9 +549,19 @@ elif page == "📖 User Guide":  # User Guide selected
         ("🔗 Fitting & CLT", "Distribution fitting with goodness-of-fit, plus a Central Limit Theorem simulation."),
         ("🧪 Hypothesis Testing", "A full suite of tests grouped by type, plus a Test Advisor that recommends a test."),
         ("🎯 Confidence Intervals", "Estimate the range that very likely contains the true population mean."),
-    ]  # End of module descriptions
-    guide_df = pd.DataFrame(guide_rows, columns=["Module", "What it does"])  # Convert to a table
-    st.dataframe(guide_df, use_container_width=True, hide_index=True)  # Show the table
+    ]  # End of module list
+
+    # Render each module as a clickable button + its description, two per row
+    for i in range(0, len(module_guide), 2):  # Step through the list two at a time
+        row = module_guide[i:i + 2]  # Take up to two modules for this row
+        cols = st.columns(2)  # Two side-by-side columns
+        for j, (page_name, desc) in enumerate(row):  # Loop over the modules in this row
+            with cols[j]:  # Place content in the correct column
+                # The button: clicking it jumps to that page
+                if st.button(page_name, key=f"guide_jump_{i+j}", use_container_width=True):  # Clickable button
+                    st.session_state["nav_radio"] = page_name  # Set the sidebar selection to this page
+                    st.rerun()  # Rerun the app so the new page shows immediately
+                st.caption(desc)  # Show the short description under the button
 
     # ---- Available statistical tests ----
     st.markdown("### 🧪 Statistical tests available")  # Section heading
@@ -590,9 +605,9 @@ elif page == "📖 User Guide":  # User Guide selected
     # ---- Link to the live app / source ----
     st.markdown("### 🔗 Links")  # Section heading
     st.markdown(
-        "- **Live app:** https://srh-stats-dashboard.streamlit.app\n"
-        "- **Source code & full documentation:** https://github.com/sadeghianh/BigDataTools"
-    )  # Helpful links
+        "- **Live app:** [srh-stats-dashboard.streamlit.app](https://srh-stats-dashboard.streamlit.app)\n"
+        "- **Source code & full documentation:** [github.com/sadeghianh/BigDataTools](https://github.com/sadeghianh/BigDataTools)"
+    )  # Helpful clickable links (Markdown [text](url) syntax renders as hyperlinks)
 
 
 # =====================================================================
