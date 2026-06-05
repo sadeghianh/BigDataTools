@@ -153,3 +153,65 @@ def render_data_profile(df: pd.DataFrame):
 
     st.info("💡 Tip: Go to the **Test Advisor** (under Hypothesis Testing) to get a specific "  # Show an informational message
             "test recommendation based on your exact variables and goal.")  # Point to advisor
+
+    # =====================================================================
+    # DATA CLEANING & EXPORT
+    # Lets the user clean the dataset (handle missing values, remove duplicates)
+    # and download the cleaned result as a CSV file.
+    # =====================================================================
+    st.markdown("---")  # Divider
+    st.markdown("#### 🧹 Clean & Export Data")  # Section heading
+    st.caption("Optionally clean your dataset and download the result as a CSV file.")  # Explanation
+
+    # ---- Let the user choose how to handle missing values ----
+    clean_option = st.radio(  # Radio buttons for the cleaning strategy
+        "How should missing values be handled?",
+        [
+            "Keep as-is (no change)",                 # Do nothing
+            "Remove rows with any missing value",     # Drop incomplete rows
+            "Fill numeric missing with column mean",  # Impute numeric columns
+            "Fill numeric missing with column median",# Impute with median
+        ],
+        key="clean_missing_option"  # Unique widget key
+    )
+
+    # ---- Option to remove duplicate rows ----
+    remove_dupes = st.checkbox("Also remove duplicate rows", value=False, key="clean_dupes")  # Checkbox
+
+    # ---- Build the cleaned DataFrame based on the chosen options ----
+    cleaned = df.copy()  # Start from a copy so the original is never changed
+    numeric_cols_all = cleaned.select_dtypes(include=[np.number]).columns  # Numeric columns
+
+    if clean_option == "Remove rows with any missing value":  # Drop rows with NaN
+        cleaned = cleaned.dropna()  # Remove any row containing a missing value
+    elif clean_option == "Fill numeric missing with column mean":  # Mean imputation
+        for c in numeric_cols_all:  # Loop over numeric columns
+            cleaned[c] = cleaned[c].fillna(cleaned[c].mean())  # Fill NaN with the column mean
+    elif clean_option == "Fill numeric missing with column median":  # Median imputation
+        for c in numeric_cols_all:  # Loop over numeric columns
+            cleaned[c] = cleaned[c].fillna(cleaned[c].median())  # Fill NaN with the column median
+    # (If "Keep as-is" is chosen, we make no changes)
+
+    if remove_dupes:  # If the user wants duplicates removed
+        before = len(cleaned)  # Row count before
+        cleaned = cleaned.drop_duplicates()  # Remove exact duplicate rows
+        removed = before - len(cleaned)  # How many were removed
+        if removed > 0:  # If any duplicates were found
+            st.caption(f"Removed {removed} duplicate row(s).")  # Report how many
+
+    # ---- Show a short before/after summary so the user sees the effect ----
+    cc1, cc2 = st.columns(2)  # Two columns for before/after
+    with cc1:  # Before
+        st.metric("Original rows", f"{len(df):,}")  # Original row count
+    with cc2:  # After
+        st.metric("Rows after cleaning", f"{len(cleaned):,}")  # Cleaned row count
+
+    # ---- Download button for the cleaned dataset ----
+    csv_bytes = cleaned.to_csv(index=False).encode("utf-8")  # Convert the cleaned data to CSV bytes
+    st.download_button(  # Create the download button
+        "⬇️ Download Cleaned Dataset (CSV)",  # Button label
+        data=csv_bytes,                        # The CSV content
+        file_name="cleaned_dataset.csv",       # Suggested filename
+        mime="text/csv",                       # File type
+        help="Download your dataset after applying the cleaning options above."  # Tooltip
+    )

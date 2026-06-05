@@ -19,6 +19,7 @@ from modules.normalization import render_normalization  # Normalization module
 from modules.distributions import render_distributions  # Theoretical distributions module
 from modules.fitting import render_fitting              # Distribution fitting + CLT module
 from modules.tests import render_tests                  # Hypothesis testing module
+from modules.confidence import render_confidence_intervals  # Confidence intervals module
 from modules.data_profile import render_data_profile    # Data profile ("know your data") module
 from utils.helpers import (                             # Shared helper functions
     validate_dataframe,                                 # Checks a DataFrame is loaded and non-empty
@@ -343,6 +344,7 @@ with st.sidebar:  # Everything inside here renders in the sidebar
             "🔔 Distributions",             # Theoretical distributions
             "🔗 Fitting & CLT",             # Distribution fitting + CLT
             "🧪 Hypothesis Testing",        # All statistical tests
+            "🎯 Confidence Intervals",      # Confidence intervals for the mean
         ],
         label_visibility="collapsed",   # Hide the label (heading shown above)
         key="nav_radio"                 # Unique widget key
@@ -456,6 +458,7 @@ if page == "🏠 Home":  # Home selected
         with col3:  # Third
             st.info("**🔗 Fitting & CLT**\n\nFit data to distributions + CLT simulation")  # Card
             st.info("**🧪 Hypothesis Testing**\n\nParametric & non-parametric tests + Test Advisor")  # Card
+            st.info("**🎯 Confidence Intervals**\n\nEstimate the range that contains the true mean")  # Card
             st.success("**✅ Real data · Clear explanations · Every result interpreted**")  # Card
 
         st.markdown("#### 🚀 Quick Start")  # Quick-start heading
@@ -502,6 +505,11 @@ elif page == "🔗 Fitting & CLT":  # Fitting & CLT selected
 elif page == "🧪 Hypothesis Testing":  # Hypothesis testing selected
     if validate_dataframe(df):          # Ensure dataset is loaded
         render_tests(df)                # Call the hypothesis testing module
+
+# ---- CONFIDENCE INTERVALS PAGE ----
+elif page == "🎯 Confidence Intervals":  # Confidence intervals selected
+    if validate_dataframe(df):            # Ensure dataset is loaded
+        render_confidence_intervals(df)   # Call the confidence intervals module
 
 
 # =====================================================================
