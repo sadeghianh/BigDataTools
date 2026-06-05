@@ -17,9 +17,12 @@ import streamlit as st       # Import streamlit for UI error display
 
 def render_unit_manager(df: pd.DataFrame):
     """
-    Render a unit input section in the sidebar.
+    Render a unit input grid for all numeric columns.
     User types the unit for each numeric column (e.g. $, kg, years, %).
     Units are stored in st.session_state["col_units"] so all modules can access them.
+
+    This renders in the MAIN content area as a multi-column grid (not the sidebar),
+    so the user does not have to scroll a long sidebar.
 
     Parameters:
         df (pd.DataFrame): The uploaded dataset — used to get column names
@@ -29,26 +32,31 @@ def render_unit_manager(df: pd.DataFrame):
 
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()  # Get numeric columns
     if not numeric_cols:  # No numeric columns — nothing to configure
-        return
+        st.caption("No numeric columns in this dataset.")  # Inform the user
+        return  # Exit
 
     # Initialize the units dictionary in session state if not already done
     if "col_units" not in st.session_state:  # First time loading
         st.session_state["col_units"] = {}  # Create empty dict to store units
 
-    st.sidebar.markdown("---")  # Divider in sidebar
-    st.sidebar.markdown("### 📏 Column Units")  # Section heading in sidebar
-    st.sidebar.caption("Define units for numeric columns. They will appear on all chart axes.")
+    st.caption("Type a unit for any numeric column (e.g. $, kg, years, %). "
+               "Units appear automatically on all chart axes and in results.")  # Instructions
 
-    # Show a text input for each numeric column
-    for col in numeric_cols:  # Loop over every numeric column
-        current = st.session_state["col_units"].get(col, "")  # Get existing unit or empty string
-        unit = st.sidebar.text_input(
-            f"{col}:",                          # Label = column name
-            value=current,                      # Pre-fill with any previously entered unit
-            placeholder="e.g. $, kg, years",   # Hint text
-            key=f"unit_input_{col}"             # Unique key per column
-        )
-        st.session_state["col_units"][col] = unit.strip()  # Save the entered unit (stripped of spaces)
+    # Lay out the inputs in a grid of up to 3 columns so they fit without scrolling
+    cols_per_row = 3  # Number of inputs side by side
+    for i in range(0, len(numeric_cols), cols_per_row):  # Step through columns in groups of 3
+        row_cols = numeric_cols[i:i + cols_per_row]  # The columns for this row
+        grid = st.columns(cols_per_row)  # Create the layout columns
+        for j, col in enumerate(row_cols):  # Loop over each column in this row
+            with grid[j]:  # Place the input in its grid cell
+                current = st.session_state["col_units"].get(col, "")  # Existing unit or empty
+                unit = st.text_input(  # Text input for this column's unit
+                    f"{col}",                            # Label = column name
+                    value=current,                       # Pre-fill with previous unit
+                    placeholder="e.g. $, kg, years",    # Hint text
+                    key=f"unit_input_{col}"              # Unique key per column
+                )
+                st.session_state["col_units"][col] = unit.strip()  # Save the entered unit
 
 
 def get_unit(col: str) -> str:

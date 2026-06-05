@@ -22,7 +22,7 @@ from modules.tests import render_tests                  # Hypothesis testing mod
 from modules.data_profile import render_data_profile    # Data profile ("know your data") module
 from utils.helpers import (                             # Shared helper functions
     validate_dataframe,                                 # Checks a DataFrame is loaded and non-empty
-    render_unit_manager,                                # Sidebar unit inputs for numeric columns
+    render_unit_manager,                                # Unit inputs for numeric columns
     srh_logo_svg,                                       # Inline SRH University logo (SVG)
 )
 
@@ -41,128 +41,269 @@ st.set_page_config(                       # Configure the Streamlit page setting
 
 
 # =====================================================================
-# CUSTOM CSS STYLING — light, modern, SRH-branded theme
-# Injects CSS directly into the page for a polished look
+# CUSTOM CSS STYLING — modern "Slate & Amber" theme
+# A deep slate sidebar with warm amber accents and airy light content
 # =====================================================================
 
 st.markdown("""
 <style>
-/* ---- Import a clean Google font ---- */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+/* ---- Clean modern font ---- */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-/* ---- Global font ---- */
-html, body, [class*="css"] {
-    font-family: 'Inter', -apple-system, sans-serif;
+html, body, [class*="css"], .stApp {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* ---- Light gradient main background ---- */
+/* ====== MAIN CONTENT BACKGROUND ====== */
 .stApp {
-    background: linear-gradient(135deg, #f6f9fc 0%, #eef3f9 100%);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #fff4ec 0%, rgba(255,244,236,0) 55%),
+      radial-gradient(900px 500px at -10% 10%, #eaf6f4 0%, rgba(234,246,244,0) 50%),
+      #f4f7fa;
 }
 
-/* ---- Sidebar: soft white with subtle border ---- */
+/* Constrain main content width so it doesn't stretch on wide screens */
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    max-width: 1280px;
+}
+
+/* ====== SIDEBAR — deep slate gradient ====== */
 [data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0f2a3f 0%, #143b54 100%);
+    border-right: none;
+}
+/* Default sidebar text = light */
+[data-testid="stSidebar"] .stMarkdown,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    color: #dbe7f0 !important;
+}
+[data-testid="stSidebar"] .stCaption, [data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
+    color: #8fb0c4 !important;
+}
+
+/* ====== FILE UPLOADER — readable on the dark sidebar ====== */
+/* The uploader's drop zone: give it a solid light card look */
+[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] {
     background: #ffffff;
-    border-right: 1px solid #e6ebf2;
+    border: 2px dashed #c2d3e0;
+    border-radius: 12px;
 }
-[data-testid="stSidebar"] * {
-    color: #2c3e50;
+/* All text inside the drop zone = dark slate (so "Drag and drop", size limit, etc. are readable) */
+[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] *,
+[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] span,
+[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] small,
+[data-testid="stSidebar"] [data-testid="stFileUploaderDropzoneInstructions"] * {
+    color: #1f3b52 !important;
+}
+/* The little instruction sub-text (e.g. "200MB per file") slightly muted but still readable */
+[data-testid="stSidebar"] [data-testid="stFileUploaderDropzoneInstructions"] small {
+    color: #5b7a91 !important;
+}
+/* The "Browse files" button inside the uploader = amber, white text */
+[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] button {
+    background: linear-gradient(135deg, #f7934c 0%, #e8650e 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    font-weight: 700 !important;
+}
+/* The uploader's outer label ("Upload a CSV file") stays light on the dark sidebar */
+[data-testid="stSidebar"] [data-testid="stFileUploader"] > label,
+[data-testid="stSidebar"] [data-testid="stFileUploader"] > label * {
+    color: #dbe7f0 !important;
+}
+/* Uploaded-file chip (after a file is selected): readable dark text on light chip */
+[data-testid="stSidebar"] [data-testid="stFileUploaderFile"] * {
+    color: #1f3b52 !important;
 }
 
-/* ---- Sidebar navigation radio buttons as clean cards ---- */
-[data-testid="stSidebar"] .stRadio > div {
-    gap: 4px;
+/* ====== SIDEBAR NAV: radio rendered as pill buttons ====== */
+[data-testid="stSidebar"] [role="radiogroup"] {
+    gap: 6px;
+    display: flex;
+    flex-direction: column;
 }
-[data-testid="stSidebar"] .stRadio label {
-    background: #f7fafc;
-    border: 1px solid #e6ebf2;
-    border-radius: 8px;
-    padding: 8px 12px;
-    margin-bottom: 2px;
+/* hide the little radio circle */
+[data-testid="stSidebar"] [role="radiogroup"] label > div:first-child {
+    display: none;
+}
+[data-testid="stSidebar"] [role="radiogroup"] label {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin: 0;
+    cursor: pointer;
     transition: all 0.15s ease;
-    font-weight: 500;
+    width: 100%;
 }
-[data-testid="stSidebar"] .stRadio label:hover {
-    background: #fff0e9;
-    border-color: #D44407;
+[data-testid="stSidebar"] [role="radiogroup"] label:hover {
+    background: rgba(247,147,76,0.16);
+    border-color: rgba(247,147,76,0.5);
+}
+/* The SELECTED nav item — amber fill, white text (fixes unreadable text) */
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {
+    background: linear-gradient(135deg, #f7934c 0%, #e8650e 100%);
+    border-color: #e8650e;
+    box-shadow: 0 4px 14px rgba(232,101,14,0.45);
+}
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) * {
+    color: #ffffff !important;
+    font-weight: 700 !important;
 }
 
-/* ---- Metric cards: white with soft shadow and orange accent ---- */
+/* ====== MAIN-AREA RADIO (e.g. test category) — readable chips ====== */
+section.main [role="radiogroup"] {
+    gap: 8px;
+}
+section.main [role="radiogroup"] label {
+    background: #ffffff;
+    border: 1.5px solid #dde6ee;
+    border-radius: 10px;
+    padding: 8px 16px;
+    transition: all 0.15s ease;
+    color: #21425c !important;
+    font-weight: 600;
+}
+section.main [role="radiogroup"] label:hover {
+    border-color: #f7934c;
+    background: #fff8f2;
+}
+section.main [role="radiogroup"] label:has(input:checked) {
+    background: linear-gradient(135deg, #16607a 0%, #0f4a60 100%);
+    border-color: #0f4a60;
+    box-shadow: 0 4px 12px rgba(15,74,96,0.3);
+}
+section.main [role="radiogroup"] label:has(input:checked) * {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+/* ====== METRIC CARDS ====== */
 [data-testid="stMetric"] {
     background: #ffffff;
-    border: 1px solid #e6ebf2;
-    border-left: 4px solid #D44407;
-    border-radius: 10px;
-    padding: 14px 18px;
-    box-shadow: 0 1px 3px rgba(16,42,67,0.06);
+    border: 1px solid #e7eef5;
+    border-radius: 14px;
+    padding: 16px 20px;
+    box-shadow: 0 4px 16px rgba(16,42,67,0.06);
+    position: relative;
+    overflow: hidden;
+}
+[data-testid="stMetric"]::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, #f7934c, #e8650e);
 }
 [data-testid="stMetricValue"] {
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: #102a43;
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: #0f2a3f;
 }
 [data-testid="stMetricLabel"] {
-    font-weight: 500;
-    color: #627d98;
+    font-weight: 600;
+    color: #5b7a91;
 }
 
-/* ---- Headings ---- */
-h1, h2, h3 {
-    color: #102a43;
+/* ====== HEADINGS ====== */
+section.main h1 {
+    color: #0f2a3f;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+section.main h2, section.main h3 {
+    color: #143b54;
     font-weight: 700;
 }
 
-/* ---- Primary buttons: SRH orange ---- */
+/* ====== BUTTONS — amber gradient ====== */
 .stButton > button {
-    background: linear-gradient(135deg, #D44407 0%, #e85d20 100%);
+    background: linear-gradient(135deg, #f7934c 0%, #e8650e 100%);
     color: #ffffff;
-    border-radius: 8px;
+    border-radius: 10px;
     border: none;
-    padding: 0.5rem 1.4rem;
-    font-weight: 600;
-    box-shadow: 0 2px 6px rgba(212,68,7,0.25);
-    transition: all 0.15s ease;
+    padding: 0.55rem 1.5rem;
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgba(232,101,14,0.3);
+    transition: all 0.18s ease;
 }
 .stButton > button:hover {
-    background: linear-gradient(135deg, #b8390a 0%, #D44407 100%);
-    box-shadow: 0 4px 10px rgba(212,68,7,0.35);
-    transform: translateY(-1px);
+    background: linear-gradient(135deg, #e8650e 0%, #c9530a 100%);
+    box-shadow: 0 6px 20px rgba(232,101,14,0.42);
+    transform: translateY(-2px);
+}
+.stButton > button:active {
+    transform: translateY(0);
 }
 
-/* ---- Tabs / radio inside main area ---- */
-.stRadio [role="radiogroup"] label {
-    font-weight: 500;
+/* ====== DOWNLOAD BUTTON — teal variant ====== */
+.stDownloadButton > button {
+    background: linear-gradient(135deg, #16607a 0%, #0f4a60 100%);
+    color: #ffffff;
+    border-radius: 10px;
+    border: none;
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgba(15,74,96,0.3);
+}
+.stDownloadButton > button:hover {
+    background: linear-gradient(135deg, #0f4a60 0%, #0a3548 100%);
 }
 
-/* ---- Expander: card-like ---- */
+/* ====== EXPANDERS — clean cards ====== */
 details {
     background: #ffffff;
-    border: 1px solid #e6ebf2;
-    border-radius: 10px;
-    padding: 4px 12px;
-    box-shadow: 0 1px 3px rgba(16,42,67,0.05);
+    border: 1px solid #e7eef5;
+    border-radius: 14px;
+    padding: 6px 16px;
+    box-shadow: 0 2px 10px rgba(16,42,67,0.05);
+    margin-bottom: 8px;
 }
 details > summary {
-    font-weight: 600;
-    color: #102a43;
+    font-weight: 700;
+    color: #143b54;
+    padding: 6px 0;
 }
 
-/* ---- DataFrame container ---- */
+/* ====== DATAFRAME ====== */
 [data-testid="stDataFrame"] {
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
-    border: 1px solid #e6ebf2;
+    border: 1px solid #e7eef5;
+    box-shadow: 0 2px 10px rgba(16,42,67,0.04);
 }
 
-/* ---- Info/success/warning boxes: rounder ---- */
+/* ====== ALERT BOXES ====== */
 .stAlert {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 2px 10px rgba(16,42,67,0.05);
+}
+
+/* ====== INPUTS ====== */
+.stSelectbox > div > div, .stTextInput > div > div, .stNumberInput > div > div {
     border-radius: 10px;
 }
 
-/* ---- Selectbox & inputs ---- */
-.stSelectbox > div > div, .stTextInput > div > div {
-    border-radius: 8px;
+/* ====== TABS ====== */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 6px;
 }
+.stTabs [data-baseweb="tab"] {
+    border-radius: 10px 10px 0 0;
+    font-weight: 600;
+    padding: 8px 16px;
+}
+
+/* Hide Streamlit default menu/footer for a cleaner look */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)   # unsafe_allow_html=True is required to inject raw CSS
 
@@ -173,30 +314,28 @@ details > summary {
 
 with st.sidebar:  # Everything inside here renders in the sidebar
     # ---- SRH University logo (inline SVG, official orange) ----
-    st.markdown(srh_logo_svg(width=170), unsafe_allow_html=True)  # Render the SRH logo
+    st.markdown(srh_logo_svg(width=180), unsafe_allow_html=True)  # Render the SRH logo
 
-    # ---- Dashboard title ----
-    st.markdown("## 📊 Stats Dashboard")            # Dashboard title
-    st.caption("Interactive Statistical Analysis · SRH University")  # Subtitle
-    st.markdown("---")  # Divider
+    st.markdown("### 📊 Stats Dashboard")  # Dashboard title
+    st.caption("Interactive Statistical Analysis")  # Subtitle
+    st.markdown("")  # Small spacer
 
     # ---- FILE UPLOAD ----
-    st.markdown("### 📂 Upload Dataset")  # Upload section heading
     uploaded_file = st.file_uploader(     # Drag-and-drop CSV upload widget
-        "Upload a CSV file",              # Label
+        "📂 Upload a CSV file",           # Label
         type=["csv"],                     # Only accept .csv files
         help="Upload any CSV dataset to begin analysis",  # Tooltip
     )
 
-    st.markdown("---")  # Divider between upload and navigation
+    st.markdown("")  # Spacer
 
     # ---- NAVIGATION MENU ----
-    st.markdown("### 🧭 Navigate")  # Navigation heading
-    page = st.radio(                # Vertical radio-button menu
+    st.markdown("##### NAVIGATION")  # Navigation heading (small caps style)
+    page = st.radio(                # Vertical radio-button menu (styled as pills)
         "Choose a module:",         # Label (hidden below)
         [                           # List of available pages
             "🏠 Home",                      # Welcome page
-            "🔎 Data Profile",              # Know-your-data overview (NEW)
+            "🔎 Data Profile",              # Know-your-data overview
             "📐 Descriptive Statistics",    # Mean, median, std, etc.
             "📈 Visualizations",            # Charts
             "🎲 Sampling",                  # Sampling methods
@@ -232,20 +371,28 @@ if uploaded_file is not None:       # A file has been uploaded
 
 df = st.session_state.get("df", None)  # Retrieve the DataFrame (None if nothing loaded)
 
-# ---- Sidebar dataset info + unit manager (only when a file is loaded) ----
+# ---- Sidebar dataset status (compact, no scrolling needed) ----
 if df is not None:  # A dataset is loaded
     with st.sidebar:  # Render in the sidebar
-        st.markdown("---")  # Divider
-        st.markdown("### ✅ Dataset Loaded")  # Status heading
-        st.markdown(f"- **Rows:** {df.shape[0]:,}")          # Row count
-        st.markdown(f"- **Columns:** {df.shape[1]}")         # Column count
-        st.markdown(f"- **Numeric cols:** {len(df.select_dtypes(include='number').columns)}")  # Numeric count
+        st.markdown("")  # Spacer
         missing_pct = 100 * df.isnull().sum().sum() / (df.shape[0] * df.shape[1])  # % missing cells
-        st.markdown(f"- **Missing values:** {missing_pct:.1f}%")  # Missing percentage
-
-    # Render the unit manager so the user can define units for each numeric column.
-    # These units appear on chart axes and in results throughout the dashboard.
-    render_unit_manager(df)  # Show unit text inputs in the sidebar
+        n_numeric = len(df.select_dtypes(include='number').columns)  # Numeric column count
+        # Compact one-line status card using HTML
+        st.markdown(
+            f"""
+            <div style="background:rgba(247,147,76,0.12); border:1px solid rgba(247,147,76,0.3);
+                        border-radius:10px; padding:10px 14px; margin-top:8px;">
+                <div style="color:#f7934c; font-weight:700; font-size:0.85rem; margin-bottom:4px;">
+                    ✅ DATASET LOADED
+                </div>
+                <div style="color:#dbe7f0; font-size:0.8rem; line-height:1.6;">
+                    {df.shape[0]:,} rows · {df.shape[1]} cols<br>
+                    {n_numeric} numeric · {missing_pct:.1f}% missing
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True  # Allow the HTML status card
+        )
 
 
 # =====================================================================
@@ -254,53 +401,68 @@ if df is not None:  # A dataset is loaded
 
 # ---- HOME PAGE ----
 if page == "🏠 Home":  # Home selected
-    st.title("📊 Statistical Analysis Dashboard")  # Main page title
-    st.markdown("#### Welcome to your interactive statistics toolbox — built for SRH University")  # Subtitle
+    # Hero banner using HTML for a polished landing
+    st.markdown(
+        """
+        <div style="background:linear-gradient(135deg,#0f2a3f 0%,#16607a 100%);
+                    border-radius:18px; padding:36px 40px; margin-bottom:8px;
+                    box-shadow:0 10px 30px rgba(15,42,63,0.25);">
+            <div style="color:#f7934c; font-weight:700; font-size:0.9rem; letter-spacing:2px;">
+                SRH UNIVERSITY · TOOLS &amp; METHODS OF DATA ANALYSIS
+            </div>
+            <div style="color:#ffffff; font-weight:800; font-size:2.1rem; margin-top:8px; letter-spacing:-0.5px;">
+                Statistical Analysis Dashboard
+            </div>
+            <div style="color:#bcd4e2; font-size:1.05rem; margin-top:10px; max-width:680px;">
+                A complete, interactive workflow for exploring any dataset — descriptive statistics,
+                visualizations, distributions, and a full suite of parametric &amp; non-parametric tests.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True  # Allow the hero banner HTML
+    )
 
-    st.markdown("This dashboard provides a complete statistical analysis workflow for any CSV dataset. "
-                "Upload a file using the sidebar and explore the modules below.")  # Intro text
+    # If a dataset is loaded, show preview + units up top; else show quick-start
+    if df is not None:  # Data is loaded
+        # ---- Units panel right on the home page (no sidebar scrolling) ----
+        with st.expander("📏 Set Column Units (optional — shown on all chart axes)", expanded=False):  # Collapsible units
+            render_unit_manager(df)  # Render the unit inputs in a grid here
 
-    # Feature overview cards in three columns
-    col1, col2, col3 = st.columns(3)  # Three columns
-
-    with col1:  # First column of feature cards
-        st.info("**🔎 Data Profile**\nUnderstand your data: size, types, missing values, normality")  # Card
-        st.info("**📐 Descriptive Statistics**\nMean, Median, Mode, Variance, Std Dev with formulas")  # Card
-        st.info("**📈 Visualizations**\nHistogram, Boxplot, Scatter, KDE, Violin & more")  # Card
-
-    with col2:  # Second column
-        st.info("**🎲 Sampling**\nRandom, Systematic, Stratified sampling methods")  # Card
-        st.info("**⚖️ Normalization**\nMin-Max scaling and Z-score standardization")  # Card
-        st.info("**🔔 Distributions**\nNormal, Poisson, Exponential, Binomial, Bernoulli, Uniform")  # Card
-
-    with col3:  # Third column
-        st.info("**🔗 Fitting & CLT**\nFit your data to distributions + CLT simulation")  # Card
-        st.info("**🧪 Hypothesis Testing**\nParametric & non-parametric tests + a Test Advisor")  # Card
-        st.success("**✅ Every module is interactive, uses your real data, and explains its results**")  # Card
-
-    # If no dataset is loaded, show quick-start instructions; otherwise show a preview
-    if df is None:  # No data loaded yet
-        st.markdown("---")  # Divider
-        st.markdown("### 🚀 Quick Start")  # Quick start heading
-        st.markdown("1. Click **Browse files** in the sidebar\n"
-                    "2. Upload any CSV dataset (e.g. Iris, Titanic, or your own)\n"
-                    "3. Visit **Data Profile** to understand your data\n"
-                    "4. Use the menu to run any analysis")  # Numbered steps
-        st.info("💡 Tip: You can download sample datasets from Kaggle or use any CSV file.")  # Tip
-    else:  # A dataset is loaded
-        st.markdown("---")  # Divider
-        st.markdown("### 📋 Dataset Preview")  # Preview heading
-        st.dataframe(df.head(10), use_container_width=True)  # Show first 10 rows
+        # ---- Dataset preview ----
+        st.markdown("#### 📋 Dataset Preview")  # Preview heading
+        st.dataframe(df.head(10), use_container_width=True)  # First 10 rows
         st.caption(f"Showing first 10 of {len(df):,} rows · {len(df.columns)} columns")  # Caption
 
-        with st.expander("📊 Column Data Types"):  # Collapsible column-type table
-            dtype_df = pd.DataFrame({  # Build a summary of columns and dtypes
-                "Column": df.dtypes.index,                    # Column names
-                "Data Type": df.dtypes.values.astype(str),    # Data types as strings
-                "Non-Null Count": df.count().values,          # Non-null counts
-                "Null Count": df.isnull().sum().values,       # Null counts
-            })  # End DataFrame
-            st.dataframe(dtype_df, use_container_width=True, hide_index=True)  # Show the table
+        # ---- Quick stats row ----
+        c1, c2, c3, c4 = st.columns(4)  # Four metric columns
+        with c1: st.metric("Rows", f"{df.shape[0]:,}")  # Row count
+        with c2: st.metric("Columns", str(df.shape[1]))  # Column count
+        with c3: st.metric("Numeric", str(len(df.select_dtypes(include='number').columns)))  # Numeric count
+        with c4: st.metric("Categorical", str(len(df.select_dtypes(include=['object','category']).columns)))  # Categorical count
+
+        st.info("👉 Use the sidebar to navigate. Start with **🔎 Data Profile** to understand your data, "
+                "then run any analysis. The **🧭 Test Advisor** (in Hypothesis Testing) recommends the right test.")  # Guidance
+    else:  # No data loaded
+        # Feature cards in three columns
+        col1, col2, col3 = st.columns(3)  # Three columns
+        with col1:  # First
+            st.info("**🔎 Data Profile**\n\nSize, types, missing values, and normality of every column")  # Card
+            st.info("**📐 Descriptive Statistics**\n\nMean, Median, Mode, Variance, Std Dev with formulas")  # Card
+            st.info("**📈 Visualizations**\n\nHistogram, Boxplot, Scatter, KDE, Violin & more")  # Card
+        with col2:  # Second
+            st.info("**🎲 Sampling**\n\nRandom, Systematic, and Stratified sampling")  # Card
+            st.info("**⚖️ Normalization**\n\nMin-Max scaling and Z-score standardization")  # Card
+            st.info("**🔔 Distributions**\n\nNormal, Poisson, Exponential, Binomial, Bernoulli, Uniform")  # Card
+        with col3:  # Third
+            st.info("**🔗 Fitting & CLT**\n\nFit data to distributions + CLT simulation")  # Card
+            st.info("**🧪 Hypothesis Testing**\n\nParametric & non-parametric tests + Test Advisor")  # Card
+            st.success("**✅ Real data · Clear explanations · Every result interpreted**")  # Card
+
+        st.markdown("#### 🚀 Quick Start")  # Quick-start heading
+        st.markdown("1. Click **Browse files** in the sidebar\n"
+                    "2. Upload any CSV dataset (e.g. Iris, Titanic, or your own)\n"
+                    "3. Visit **🔎 Data Profile** to understand your data\n"
+                    "4. Use the menu to run any analysis")  # Steps
 
 # ---- DATA PROFILE PAGE ----
 elif page == "🔎 Data Profile":  # Data Profile selected
@@ -346,10 +508,9 @@ elif page == "🧪 Hypothesis Testing":  # Hypothesis testing selected
 # FOOTER
 # =====================================================================
 
-st.markdown("---")  # Bottom divider
-st.markdown(  # Centered footer text
-    "<div style='text-align:center; color:#9fb3c8; font-size:0.8rem; padding:8px;'>"  # Styled container
-    "Statistical Dashboard · SRH University · Built with Python &amp; Streamlit · Educational Use"  # Footer text
+st.markdown(
+    "<div style='text-align:center; color:#9fb3c8; font-size:0.8rem; padding:18px;'>"  # Styled footer
+    "Statistical Dashboard · SRH University · Built with Python &amp; Streamlit"  # Footer text
     "</div>",
     unsafe_allow_html=True   # Allow HTML for the centered footer
 )

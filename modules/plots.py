@@ -116,10 +116,16 @@ def render_plots(df: pd.DataFrame):  # Define the render_plots function
     elif plot_type == "Line Plot":  # Check alternative condition
         x_col = st.selectbox("X-axis column:", all_cols, key="line_x")          # X axis
         render_inline_unit_input(x_col, "line_x")  # Unit for x axis
-        y_col = st.selectbox("Y-axis column:", numeric_cols, key="line_y")      # Y axis
-        render_inline_unit_input(y_col, "line_y")  # Unit for y axis
-        if st.button("Generate Line Plot"):                                      # Trigger
-            _plot_line(df, x_col, y_col)                                         # Call function
+        # Y options exclude the column already chosen for X so they can't be identical
+        y_options = [c for c in numeric_cols if c != x_col]  # Numeric columns minus the X column
+        if not y_options:  # Edge case: only one numeric column and it's the X column
+            st.warning("Need at least one numeric column different from the X-axis column "
+                       "to draw a line plot.")  # Explain
+        else:  # We have valid Y options
+            y_col = st.selectbox("Y-axis column:", y_options, key="line_y")      # Y axis (no duplicate)
+            render_inline_unit_input(y_col, "line_y")  # Unit for y axis
+            if st.button("Generate Line Plot"):                                  # Trigger
+                _plot_line(df, x_col, y_col)                                     # Call function
 
     # ---- KDE / DENSITY PLOT ----
     # Alternative condition check
@@ -296,6 +302,22 @@ def _plot_line(df: pd.DataFrame, x_col: str, y_col: str):  # Define the _plot_li
        → Also explains the aggregation clearly.
     """
     import pandas as pd  # Import pandas for dtype checks and aggregation
+
+    # ---- Guard: X and Y must be different columns ----
+    # If the same column is chosen for both axes, a line plot is meaningless
+    # (every point would sit exactly on the diagonal y = x). Selecting the same
+    # column for both also breaks the aggregation logic below (duplicate column names).
+    if x_col == y_col:  # User picked the same column for X and Y
+        st.warning(f"""
+        ⚠️ **X-axis and Y-axis are both '{x_col}'.**
+
+        A line plot needs two *different* columns — one for the horizontal axis and
+        one for the vertical axis. Plotting a column against itself just draws a
+        straight diagonal line, which carries no information.
+
+        **What to do:** Choose a different column for either the X-axis or the Y-axis.
+        """)  # Clear explanation of the problem and the fix
+        return  # Stop — do not attempt to plot
 
     # Remove rows where either column is missing
     clean_df = df[[x_col, y_col]].dropna()  # Keep only complete pairs

@@ -1,0 +1,19 @@
+# Streamlit theme configuration
+# This sets the base theme colors at the framework level so that
+# widgets (selectboxes, radios, sliders) match our custom CSS.
+
+[theme]
+# Primary accent color — SRH-inspired amber/orange
+primaryColor = "#e8650e"
+
+# Main content background — light and airy
+backgroundColor = "#f4f7fa"
+
+# Secondary background (cards, inputs, sidebar widgets) — white
+secondaryBackgroundColor = "#ffffff"
+
+# Default text color — deep slate (readable on light background)
+textColor = "#0f2a3f"
+
+# Font family
+font = "sans serif"
