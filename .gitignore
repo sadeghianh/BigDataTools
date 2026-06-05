@@ -1,0 +1,18 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Virtual environment (must NOT be pushed to GitHub)
+venv/
+env/
+.venv/
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Streamlit secrets (if you ever add them)
+.streamlit/secrets.toml
